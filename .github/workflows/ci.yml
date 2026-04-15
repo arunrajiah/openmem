@@ -36,19 +36,19 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      # ── Verify shared dist is accessible via the workspace symlink ───────────
-      # (routes/ingest.ts has a runtime value import from @openmem/shared)
-      - name: Verify @openmem/shared dist
+      # ── Debug: diagnose why tsc is not emitting JS in CI ─────────────────────
+      - name: Debug shared build
         run: |
-          DIST="packages/shared/dist/index.js"
-          if [ ! -f "$DIST" ]; then
-            echo "::error::$DIST missing — rebuilding"
-            pnpm --filter @openmem/shared build
-          fi
-          ls -la packages/shared/dist/
-          ls -la packages/companion/node_modules/@openmem/shared/dist/ || \
-            echo "Symlink does not expose dist — checking real path" && \
-            ls -la "$(readlink -f packages/companion/node_modules/@openmem/shared)/dist/"
+          echo "=== tsc version ==="
+          node_modules/.bin/tsc --version
+          echo "=== shared tsconfig ==="
+          cat packages/shared/tsconfig.json
+          echo "=== dist contents before rebuild ==="
+          ls -la packages/shared/dist/ 2>/dev/null || echo "(no dist)"
+          echo "=== rebuilding with --listFiles to see what tsc processes ==="
+          cd packages/shared && ../../node_modules/.bin/tsc -p tsconfig.json --listFiles
+          echo "=== dist contents after rebuild ==="
+          ls -la dist/ 2>/dev/null || echo "(still no dist)"
 
       # ── Tests ──────────────────────────────────────────────────────────────
       - name: Test companion
