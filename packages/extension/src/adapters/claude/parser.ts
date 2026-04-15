@@ -13,6 +13,7 @@ import type {
   ClaudeSSEEvent,
   ContentBlockDeltaEvent,
   ContentBlockStartEvent,
+  MessageDeltaEvent,
   MessageStartEvent,
 } from "./types.js";
 
@@ -48,7 +49,8 @@ export function parseUserTurn(
       } else if (Array.isArray(last.content)) {
         // Content may be an array of {type:"text", text:"..."} blocks
         content = last.content
-          .filter((b): b is { type: string; text: string } => typeof (b as any).text === "string")
+          .filter((b): b is { type: string; text: string } =>
+            typeof (b as { text?: unknown }).text === "string")
           .map((b) => b.text)
           .join("\n");
       }
@@ -120,8 +122,9 @@ export function parseAssistantSSE(
         );
       }
     } else if (ev.type === "message_delta") {
-      if ((ev as any).usage?.output_tokens) {
-        outputTokens = (ev as any).usage.output_tokens;
+      const mde = ev as MessageDeltaEvent;
+      if (mde.usage?.output_tokens) {
+        outputTokens = mde.usage.output_tokens;
       }
     }
   }

@@ -23,7 +23,9 @@
 import type { CapturedTurnEvent } from "../../lib/messaging.js";
 
 // ── Selectors — update if Gemini changes its DOM structure ──────────────────
-const CONVERSATION_CONTAINER_SELECTORS = [
+// Container selectors kept for reference; used to scope future queries.
+// prettier-ignore
+const _CONVERSATION_CONTAINER_SELECTORS = [ // eslint-disable-line @typescript-eslint/no-unused-vars
   "infinite-scroller",          // outer scroll container
   ".conversation-container",
   "[data-test-id='conversation-container']",

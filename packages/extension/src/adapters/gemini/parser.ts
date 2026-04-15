@@ -38,9 +38,11 @@ function stripXSSI(body: string): string {
 function extractText(parsed: unknown): string {
   // Shape 1: { candidates: [{ content: { parts: [{ text }] } }] }
   // (matches Vertex / Generative Language API style)
-  if (Array.isArray((parsed as any)?.candidates)) {
+  type GeminiCandidate = { content?: { parts?: Array<{ text?: string }> } };
+  const withCandidates = parsed as { candidates?: GeminiCandidate[] };
+  if (Array.isArray(withCandidates?.candidates)) {
     const parts: string[] = [];
-    for (const c of (parsed as any).candidates) {
+    for (const c of withCandidates.candidates) {
       if (Array.isArray(c?.content?.parts)) {
         for (const p of c.content.parts) {
           if (typeof p?.text === "string") parts.push(p.text);

@@ -17,6 +17,7 @@ import {
   parseAssistantSSE,
   resolveUserTurnConvId,
 } from "../adapters/chatgpt/index.js";
+import type { ChatGPTRequest } from "../adapters/chatgpt/types.js";
 import { OPENMEM_EVENT_KEY } from "../lib/messaging.js";
 import type { PageHookEvent } from "../lib/messaging.js";
 
@@ -63,6 +64,7 @@ window.fetch = async function patchedFetch(
       const chunks: Uint8Array[] = [];
       const reader = captureStream.getReader();
       try {
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -76,7 +78,7 @@ window.fetch = async function patchedFetch(
       const sseText = chunks.map((c) => decoder.decode(c)).join("");
 
       const assistantResult = parseAssistantSSE(sseText);
-      let userTurn = requestBody ? parseUserTurn(requestBody as any, requestedAt) : null;
+      let userTurn = requestBody ? parseUserTurn(requestBody as ChatGPTRequest, requestedAt) : null;
 
       // Resolve pending conv ID from the assistant turn
       if (userTurn && assistantResult) {

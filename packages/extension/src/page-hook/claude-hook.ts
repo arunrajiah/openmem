@@ -17,6 +17,7 @@ import {
   parseUserTurn,
   parseAssistantSSE,
 } from "../adapters/claude/index.js";
+import type { ClaudeCompletionRequest } from "../adapters/claude/types.js";
 import { OPENMEM_EVENT_KEY } from "../lib/messaging.js";
 import type { PageHookEvent } from "../lib/messaging.js";
 
@@ -76,6 +77,7 @@ window.fetch = async function patchedFetch(
       const chunks: Uint8Array[] = [];
       const reader = captureStream.getReader();
       try {
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -90,7 +92,7 @@ window.fetch = async function patchedFetch(
 
       // Emit user turn
       if (requestBody) {
-        const userTurn = parseUserTurn(convId, requestBody as any, requestedAt);
+        const userTurn = parseUserTurn(convId, requestBody as ClaudeCompletionRequest, requestedAt);
         if (userTurn) emit(userTurn);
       }
 
