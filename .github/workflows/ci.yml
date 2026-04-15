@@ -36,6 +36,20 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # ── Verify shared dist is accessible via the workspace symlink ───────────
+      # (routes/ingest.ts has a runtime value import from @openmem/shared)
+      - name: Verify @openmem/shared dist
+        run: |
+          DIST="packages/shared/dist/index.js"
+          if [ ! -f "$DIST" ]; then
+            echo "::error::$DIST missing — rebuilding"
+            pnpm --filter @openmem/shared build
+          fi
+          ls -la packages/shared/dist/
+          ls -la packages/companion/node_modules/@openmem/shared/dist/ || \
+            echo "Symlink does not expose dist — checking real path" && \
+            ls -la "$(readlink -f packages/companion/node_modules/@openmem/shared)/dist/"
+
       # ── Tests ──────────────────────────────────────────────────────────────
       - name: Test companion
         run: pnpm --filter @openmem/companion test
