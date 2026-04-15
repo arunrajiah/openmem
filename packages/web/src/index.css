@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* FTS5 snippet highlights */
+mark {
+  @apply bg-amber-400/30 text-amber-200 rounded-sm px-0.5 not-italic font-medium;
+}
