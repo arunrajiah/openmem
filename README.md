@@ -2,11 +2,13 @@
 
 **Local-first, cross-provider AI conversation memory.**
 
-Capture your chats from Claude, ChatGPT, Gemini, and others into one unified,
-searchable memory that lives entirely on your machine.
+Capture your chats from Claude, ChatGPT, and Gemini into one unified,
+searchable memory that lives entirely on your machine. No account. No cloud.
+No subscription.
 
-[![CI](https://github.com/openmem/openmem/actions/workflows/ci.yml/badge.svg)](https://github.com/openmem/openmem/actions)
+[![CI](https://github.com/openmem/openmem/actions/workflows/ci.yml/badge.svg)](https://github.com/openmem/openmem/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![npm](https://img.shields.io/npm/v/openmem.svg)](https://www.npmjs.com/package/openmem)
 
 ---
 
@@ -21,40 +23,51 @@ every conversation.
 
 ## Quickstart
 
-### 1. Install the companion app
+### 1. Start the companion app
 
 ```bash
 # Requires Node.js 20+
 npx openmem
-# Starts on http://127.0.0.1:7410
-# Data lives at ~/.openmem/openmem.db
+# → OpenMem companion listening on http://127.0.0.1:7410
+# → Data: ~/.openmem/openmem.db
 ```
 
 Open **http://127.0.0.1:7410** in your browser to see the search UI.
 
+> Override the data directory: `OPENMEM_DATA_DIR=/path/to/dir npx openmem`  
+> Override the port: `OPENMEM_PORT=7411 npx openmem`
+
 ### 2. Install the browser extension
 
-1. Build the extension (one-time):
+**Option A — Chrome Web Store** *(recommended — auto-updates)*
+
+> 🏪 [Install from Chrome Web Store](https://chrome.google.com/webstore/detail/openmem/TODO_EXTENSION_ID)
+
+**Option B — Load unpacked** *(developer / latest build)*
 
 ```bash
 git clone https://github.com/openmem/openmem
 cd openmem
 pnpm install
+pnpm --filter @openmem/shared build
 pnpm --filter @openmem/extension build
 ```
 
-2. Open Chrome → `chrome://extensions` → enable **Developer mode**
+Then in Chrome:
+1. Open `chrome://extensions`
+2. Enable **Developer mode** (top right)
 3. Click **Load unpacked** → select `packages/extension/dist/`
 
-The extension now captures conversations automatically from claude.ai,
-chatgpt.com, and gemini.google.com whenever you chat.
+### 3. Chat — conversations appear automatically
 
-### 3. Import existing history
+Go to [claude.ai](https://claude.ai), [chatgpt.com](https://chatgpt.com), or
+[gemini.google.com](https://gemini.google.com) and have a conversation.
+Come back to **http://127.0.0.1:7410** — it should appear within seconds.
 
-Already have years of chat history? Import your provider exports:
+### 4. Import existing history (optional)
 
 ```bash
-# OpenAI: Settings → Data controls → Export data → download ZIP
+# OpenAI: ChatGPT → Settings → Data controls → Export data
 npx openmem import openai ~/Downloads/openai-export.zip
 
 # Anthropic: privacy.anthropic.com → Export Data
@@ -92,13 +105,13 @@ npx openmem import gemini ~/Downloads/takeout.zip
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      Browser                                │
+│                        Browser                              │
 │                                                             │
-│  claude.ai ──┐                                              │
+│  claude.ai  ──┐                                             │
 │  chatgpt.com ─┤  Extension (MV3)                            │
-│  gemini.com ──┘  • Page-world fetch hook                    │
-│                  • Content script relay              POST   │
-│                  • Background service worker ──────────────►│
+│  gemini.com ──┘  • Page-world fetch hook (MAIN world)       │
+│                  • Content script relay (ISOLATED world)    │
+│                  • Background service worker          POST  │
 └──────────────────────────────────────────────────────────── │
                                                               │
 ┌──────────────────────────────────────────────────────────── ┘
@@ -114,15 +127,33 @@ npx openmem import gemini ~/Downloads/takeout.zip
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Data flow (live capture):**
+**Data flow:**
 1. Page-world script patches `window.fetch` before any page code runs
-2. On a completion request, it tees the response stream
+2. On a completion request it tees the response stream
 3. Accumulates SSE events; fires a `CustomEvent` when the turn is complete
 4. Content script relays to background service worker via `chrome.runtime.sendMessage`
 5. Background SW POSTs to companion `/ingest`
 6. Companion upserts conversation + message with dedup
 
-**Deduplication** is idempotent by `(provider_message_id)` or `(conversation_id, role, content_hash)` — re-importing the same export is safe.
+**Dedup** is idempotent by `provider_message_id` or `(conversation_id, role, content_hash)` — re-importing the same export is safe.
+
+---
+
+## REST API
+
+The companion exposes a simple REST API on `127.0.0.1:7410`.
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/health` | Liveness check |
+| `GET` | `/stats` | DB statistics |
+| `POST` | `/ingest` | Ingest a turn or batch |
+| `GET` | `/conversations` | List conversations (`?provider=&tag=&limit=&offset=`) |
+| `GET` | `/conversations/:id` | Get conversation + messages |
+| `GET` | `/conversations/:id/export.md` | Export as Markdown |
+| `PUT` | `/conversations/:id/tags` | Set tags `{ tags: string[] }` |
+| `GET` | `/tags` | All tags with counts |
+| `GET` | `/search` | FTS5 search (`?q=&provider=&from=&to=&limit=`) |
 
 ---
 
@@ -158,36 +189,22 @@ packages/
   web/           React search UI (Vite + Tailwind)
   shared/        Zod schemas + TypeScript types shared across packages
 scripts/
+  bump-version.mjs   Stamp a version across all packages + manifest
 docs/
   quickstart.md
   architecture.md
   legal.md
+  privacy-policy.md
+  store-listing.md
+  release-process.md
 ```
-
----
-
-## REST API
-
-The companion exposes a simple REST API on `127.0.0.1:7410`.
-
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/health` | Liveness check |
-| `GET` | `/stats` | DB statistics |
-| `POST` | `/ingest` | Ingest a turn or batch |
-| `GET` | `/conversations` | List conversations (`?provider=&tag=&limit=&offset=`) |
-| `GET` | `/conversations/:id` | Get conversation + messages |
-| `GET` | `/conversations/:id/export.md` | Export as Markdown |
-| `PUT` | `/conversations/:id/tags` | Set tags `{ tags: string[] }` |
-| `GET` | `/tags` | All tags with counts |
-| `GET` | `/search` | FTS5 search (`?q=&provider=&from=&to=&limit=`) |
 
 ---
 
 ## Principles
 
 - **Local-first.** Nothing leaves your machine unless you export it.
-- **Privacy by default.** Data lives at `~/.openmem/`. No telemetry.
+- **Privacy by default.** No telemetry. No analytics. Data at `~/.openmem/`.
 - **Provider-neutral.** Claude, ChatGPT, Gemini — all equal citizens.
 - **Small surface.** SQLite + REST, no heavy framework.
 - **Legal stance.** We capture only data the authenticated user is already
@@ -200,8 +217,13 @@ The companion exposes a simple REST API on `127.0.0.1:7410`.
 See [CONTRIBUTING.md](CONTRIBUTING.md). All PRs welcome — especially:
 - Firefox extension support
 - Additional provider adapters (Perplexity, Mistral, …)
-- Anthropic data export format updates (they change occasionally)
-- Gemini Takeout format verification (see `packages/extension/src/adapters/gemini/`)
+- Anthropic / Gemini export format updates (they change occasionally)
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 ---
 

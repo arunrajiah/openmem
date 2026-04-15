@@ -1,22 +1,63 @@
 name: CI
+
 on:
   push:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    name: Test & Build
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v4
         with:
           version: 9
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
-      - run: pnpm install --frozen-lockfile=false
-      - run: pnpm --filter @openmem/shared build
-      - run: pnpm --filter @openmem/companion test
-      - run: pnpm lint
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ── Build shared types first (all other packages depend on it) ─────────
+      - name: Build @openmem/shared
+        run: pnpm --filter @openmem/shared build
+
+      # ── Lint ───────────────────────────────────────────────────────────────
+      - name: Lint
+        run: pnpm lint
+
+      # ── Tests ──────────────────────────────────────────────────────────────
+      - name: Test companion
+        run: pnpm --filter @openmem/companion test
+
+      - name: Test extension adapters
+        run: pnpm --filter @openmem/extension test
+
+      # ── Builds (validate no type errors, artifacts usable for smoke-tests) ─
+      - name: Build companion
+        run: pnpm --filter @openmem/companion build
+
+      - name: Build extension
+        run: pnpm --filter @openmem/extension build
+
+      - name: Build web UI
+        run: pnpm --filter @openmem/web build
+
+      # ── Upload extension dist so QA can load it unpacked ──────────────────
+      - name: Upload extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-dist-${{ github.sha }}
+          path: packages/extension/dist/
+          retention-days: 14
