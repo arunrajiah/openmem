@@ -23,8 +23,8 @@ export function registerIngestRoutes(app: FastifyInstance, repo: Repo): void {
 
     const results = turns.map((t) => repo.ingestTurn(t));
     return reply.send({
-      ingested: results.filter((r) => !r.deduplicated).length,
-      deduplicated: results.filter((r) => r.deduplicated).length,
+      ingested: results.filter((r: { deduplicated: boolean }) => !r.deduplicated).length,
+      deduplicated: results.filter((r: { deduplicated: boolean }) => r.deduplicated).length,
       results,
     });
   });

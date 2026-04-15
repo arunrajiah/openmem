@@ -407,14 +407,15 @@ function rowToSearchResult(r: SearchRow): SearchResult {
 function rowToConversation(r: ConvRow): Conversation {
   return {
     id: r.id,
-    provider: r.provider,
+    // SQLite stores these as strings; values were validated by Zod on ingest
+    provider: r.provider as Conversation["provider"],
     providerConversationId: r.provider_conversation_id,
     title: r.title,
     model: r.model,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     tags: JSON.parse(r.tags_json) as string[],
-    source: r.source,
+    source: r.source as Conversation["source"],
     messageCount: r.message_count ?? 0,
   };
 }
@@ -424,9 +425,10 @@ function rowToMessage(r: MsgRow): Message {
     id: r.id,
     conversationId: r.conversation_id,
     providerMessageId: r.provider_message_id,
-    role: r.role,
+    // SQLite stores these as strings; values were validated by Zod on ingest
+    role: r.role as Message["role"],
     content: r.content,
-    contentFormat: r.content_format,
+    contentFormat: r.content_format as Message["contentFormat"],
     createdAt: r.created_at,
     tokensEstimate: r.tokens_estimate,
     attachments: JSON.parse(r.attachments_json) as Message["attachments"],
