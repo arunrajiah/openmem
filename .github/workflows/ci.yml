@@ -36,19 +36,6 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      # ── Debug: diagnose why tsc is not emitting JS in CI ─────────────────────
-      - name: Debug shared build
-        run: |
-          echo "=== tsc version ==="
-          node_modules/.bin/tsc --version
-          echo "=== shared tsconfig ==="
-          cat packages/shared/tsconfig.json
-          echo "=== dist contents before rebuild ==="
-          ls -la packages/shared/dist/ 2>/dev/null || echo "(no dist)"
-          echo "=== rebuilding with --listFiles to see what tsc processes ==="
-          cd packages/shared && ../../node_modules/.bin/tsc -p tsconfig.json --listFiles
-          echo "=== dist contents after rebuild ==="
-          ls -la dist/ 2>/dev/null || echo "(still no dist)"
 
       # ── Tests ──────────────────────────────────────────────────────────────
       - name: Test companion
