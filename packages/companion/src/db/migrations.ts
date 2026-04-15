@@ -94,7 +94,7 @@ export function runMigrations(db: Database): void {
     );
   `);
   const applied = new Set(
-    db.prepare("SELECT id FROM schema_migrations").all().map((r: any) => r.id as number),
+    db.prepare("SELECT id FROM schema_migrations").all().map((r) => (r as { id: number }).id),
   );
   const record = db.prepare(
     "INSERT INTO schema_migrations (id, name, applied_at) VALUES (?, ?, ?)",

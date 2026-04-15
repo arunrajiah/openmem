@@ -54,7 +54,7 @@ test("GET /search returns FTS results", async () => {
   assert.equal(r.statusCode, 200);
   const body = r.json();
   assert.ok(body.total >= 1);
-  assert.ok(body.results.some((res: any) => res.snippet.includes("fox")));
+  assert.ok(body.results.some((res: { snippet: string }) => res.snippet.includes("fox")));
   await a.close();
 });
 

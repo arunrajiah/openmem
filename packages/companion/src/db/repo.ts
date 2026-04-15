@@ -8,6 +8,47 @@ export interface IngestResult {
   deduplicated: boolean;
 }
 
+// ── Raw SQLite row shapes ─────────────────────────────────────────────────────
+
+interface ConvRow {
+  id: string;
+  provider: string;
+  provider_conversation_id: string;
+  title: string | null;
+  model: string | null;
+  created_at: string;
+  updated_at: string;
+  tags_json: string;
+  source: string;
+  message_count: number;
+}
+
+interface MsgRow {
+  id: string;
+  conversation_id: string;
+  provider_message_id: string | null;
+  role: string;
+  content: string;
+  content_format: string;
+  created_at: string;
+  tokens_estimate: number | null;
+  attachments_json: string;
+  tool_calls_json: string;
+}
+
+interface SearchRow {
+  message_id: string;
+  conversation_id: string;
+  conversation_title: string | null;
+  provider: string;
+  model: string | null;
+  role: string;
+  snippet: string;
+  created_at: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export class Repo {
   constructor(private db: DB) {}
 
@@ -134,7 +175,7 @@ export class Repo {
       ORDER BY c.updated_at DESC, c.rowid DESC
       LIMIT ? OFFSET ?`;
     params.push(opts.limit, opts.offset);
-    const rows = this.db.prepare(sql).all(...params) as any[];
+    const rows = this.db.prepare(sql).all(...params) as ConvRow[];
     return rows.map(rowToConversation);
   }
 
@@ -144,14 +185,14 @@ export class Repo {
         `SELECT c.*, (SELECT COUNT(*) FROM message m WHERE m.conversation_id = c.id) AS message_count
          FROM conversation c WHERE c.id = ?`,
       )
-      .get(id) as any;
+      .get(id) as ConvRow | undefined;
     return row ? rowToConversation(row) : null;
   }
 
   listMessages(conversationId: string): Message[] {
     const rows = this.db
       .prepare("SELECT * FROM message WHERE conversation_id = ? ORDER BY created_at ASC")
-      .all(conversationId) as any[];
+      .all(conversationId) as MsgRow[];
     return rows.map(rowToMessage);
   }
 
@@ -214,7 +255,7 @@ export class Repo {
            ORDER BY rank
            LIMIT ? OFFSET ?`,
         )
-        .all(...params, opts.limit, opts.offset) as any[];
+        .all(...params, opts.limit, opts.offset) as SearchRow[];
 
       return {
         results: rows.map(rowToSearchResult),
@@ -307,7 +348,7 @@ export class Repo {
          ORDER BY c.updated_at DESC, c.rowid DESC
          LIMIT ? OFFSET ?`,
       )
-      .all(tag, limit, offset) as any[];
+      .all(tag, limit, offset) as ConvRow[];
     return rows.map(rowToConversation);
   }
 }
@@ -350,7 +391,7 @@ function sanitiseFtsQuery(raw: string): string {
     .trim();
 }
 
-function rowToSearchResult(r: any): SearchResult {
+function rowToSearchResult(r: SearchRow): SearchResult {
   return {
     messageId: r.message_id,
     conversationId: r.conversation_id,
@@ -363,7 +404,7 @@ function rowToSearchResult(r: any): SearchResult {
   };
 }
 
-function rowToConversation(r: any): Conversation {
+function rowToConversation(r: ConvRow): Conversation {
   return {
     id: r.id,
     provider: r.provider,
@@ -372,13 +413,13 @@ function rowToConversation(r: any): Conversation {
     model: r.model,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
-    tags: JSON.parse(r.tags_json),
+    tags: JSON.parse(r.tags_json) as string[],
     source: r.source,
     messageCount: r.message_count ?? 0,
   };
 }
 
-function rowToMessage(r: any): Message {
+function rowToMessage(r: MsgRow): Message {
   return {
     id: r.id,
     conversationId: r.conversation_id,
@@ -388,7 +429,7 @@ function rowToMessage(r: any): Message {
     contentFormat: r.content_format,
     createdAt: r.created_at,
     tokensEstimate: r.tokens_estimate,
-    attachments: JSON.parse(r.attachments_json),
-    toolCalls: JSON.parse(r.tool_calls_json),
+    attachments: JSON.parse(r.attachments_json) as Message["attachments"],
+    toolCalls: JSON.parse(r.tool_calls_json) as Message["toolCalls"],
   };
 }
