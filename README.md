@@ -6,9 +6,8 @@ Capture your chats from Claude, ChatGPT, and Gemini into one unified,
 searchable memory that lives entirely on your machine. No account. No cloud.
 No subscription.
 
-[![CI](https://github.com/openmem/openmem/actions/workflows/ci.yml/badge.svg)](https://github.com/openmem/openmem/actions/workflows/ci.yml)
+[![CI](https://github.com/arunrajiah/openmem/actions/workflows/ci.yml/badge.svg)](https://github.com/arunrajiah/openmem/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![npm](https://img.shields.io/npm/v/openmem.svg)](https://www.npmjs.com/package/openmem)
 
 ---
 
