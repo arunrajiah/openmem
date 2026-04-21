@@ -1,5 +1,5 @@
 import esbuild from "esbuild";
-import { copyFileSync, mkdirSync } from "node:fs";
+import { copyFileSync, mkdirSync, readdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -63,6 +63,14 @@ copyFileSync(
   resolve(__dir, "manifest.json"),
   resolve(__dir, "dist/manifest.json"),
 );
+
+// Copy icon assets
+for (const f of readdirSync(resolve(__dir, "icons"))) {
+  copyFileSync(
+    resolve(__dir, "icons", f),
+    resolve(__dir, "dist/icons", f),
+  );
+}
 
 if (watch) {
   const ctxs = await Promise.all(
