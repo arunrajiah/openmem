@@ -8,6 +8,7 @@ No subscription.
 
 [![CI](https://github.com/arunrajiah/openmem/actions/workflows/ci.yml/badge.svg)](https://github.com/arunrajiah/openmem/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Sponsor](https://img.shields.io/github/sponsors/arunrajiah?label=Sponsor&logo=GitHub)](https://github.com/sponsors/arunrajiah)
 
 ---
 
@@ -223,6 +224,23 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). All PRs welcome — especially:
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md).
+
+---
+
+## Sponsorship
+
+OpenMem is free, open-source, and built entirely in spare time.
+If it saves you time or you just want to see it keep going, a sponsorship goes a long way.
+
+**[❤️ Sponsor on GitHub](https://github.com/sponsors/arunrajiah)**
+
+What sponsorships help fund:
+
+- Chrome Web Store developer fees
+- Time to build Firefox support, encryption, and the Tauri desktop app
+- Keeping the project dependency-free and well-maintained
+
+Every amount helps — thank you!
 
 ---
 
