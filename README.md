@@ -43,20 +43,34 @@ Open **http://127.0.0.1:7410** in your browser to see the search UI.
 
 > 🏪 [Install from Chrome Web Store](https://chrome.google.com/webstore/detail/openmem/TODO_EXTENSION_ID)
 
-**Option B — Load unpacked** *(developer / latest build)*
+**Option B — Firefox Add-ons** *(recommended — auto-updates)*
+
+> 🦊 [Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/openmem/) *(requires Firefox 116+)*
+
+**Option C — Load unpacked** *(developer / latest build)*
 
 ```bash
 git clone https://github.com/openmem/openmem
 cd openmem
 pnpm install
 pnpm --filter @openmem/shared build
+
+# Chrome
 pnpm --filter @openmem/extension build
+
+# Firefox
+pnpm --filter @openmem/extension build:firefox
 ```
 
 Then in Chrome:
 1. Open `chrome://extensions`
 2. Enable **Developer mode** (top right)
 3. Click **Load unpacked** → select `packages/extension/dist/`
+
+Then in Firefox:
+1. Open `about:debugging`
+2. Click **This Firefox**
+3. Click **Load Temporary Add-on** → select `packages/extension/dist-firefox/manifest.json`
 
 ### 3. Chat — conversations appear automatically
 
@@ -96,7 +110,7 @@ npx openmem import gemini ~/Downloads/takeout.zip
 | Export conversation to Markdown | ✅ |
 | Tags | ✅ |
 | Encrypted database at rest | 🗓 v1.1 |
-| Firefox extension support | 🗓 v1.1 |
+| Firefox extension support | ✅ v1.1 |
 | Tauri desktop app | 🗓 v2 |
 
 ---

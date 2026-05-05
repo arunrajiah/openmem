@@ -11,6 +11,26 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.0] — Unreleased
+
+### Added
+
+**Firefox extension support**
+- `manifest.firefox.json` — Firefox MV3 manifest with `browser_specific_settings.gecko` (`id`, `strict_min_version: 116.0`)
+- `build:firefox` and `build:watch:firefox` scripts — output to `packages/extension/dist-firefox/` with `firefox116` esbuild target
+- CI: Firefox build step + `extension-firefox-<sha>` artifact upload
+- Publish: AMO (`web-ext sign`) job in `publish.yml` runs in parallel with Chrome Web Store publish
+- GitHub Release now attaches both `openmem-chrome-X.Y.Z.zip` and `openmem-firefox-X.Y.Z.zip`
+- `scripts/bump-version.mjs` now stamps `manifest.firefox.json` alongside `manifest.json`
+- Firefox load-unpacked instructions added to README Quickstart
+
+**Community & governance**
+- `.github/CODEOWNERS` — all PRs require maintainer review
+- `.github/pull_request_template.md` — contributor checklist (lint, tests, adapter rules, migration rules)
+- Branch protection on `main`: CI must pass, 1 code-owner approval required, stale reviews dismissed on push
+
+---
+
 ## [1.0.0] — 2024-04-15
 
 Initial public release. All six planned v1 phases complete.

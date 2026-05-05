@@ -56,9 +56,12 @@ patchJSON("packages/web/package.json", (o) => {
   o.version = version;
 });
 
-// Extension manifest — Chrome Web Store requires X.Y.Z (or X.Y.Z.W) format,
+// Extension manifests — Chrome Web Store and AMO both require X.Y.Z format,
 // which semver satisfies as long as there are no pre-release suffixes.
 patchJSON("packages/extension/manifest.json", (o) => {
+  o.version = version;
+});
+patchJSON("packages/extension/manifest.firefox.json", (o) => {
   o.version = version;
 });
 

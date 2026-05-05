@@ -1,0 +1,72 @@
+{
+  "manifest_version": 3,
+  "name": "OpenMem",
+  "version": "0.0.0",
+  "description": "Local-first AI conversation memory layer",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "openmem@arunrajiah.github.io",
+      "strict_min_version": "116.0"
+    }
+  },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://claude.ai/*",
+    "https://chatgpt.com/*",
+    "https://gemini.google.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["content/claude.js"],
+      "run_at": "document_start",
+      "world": "ISOLATED"
+    },
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["page-hook/claude-hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://chatgpt.com/*"],
+      "js": ["content/chatgpt.js"],
+      "run_at": "document_start",
+      "world": "ISOLATED"
+    },
+    {
+      "matches": ["https://chatgpt.com/*"],
+      "js": ["page-hook/chatgpt-hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://gemini.google.com/*"],
+      "js": ["content/gemini.js"],
+      "run_at": "document_start",
+      "world": "ISOLATED"
+    },
+    {
+      "matches": ["https://gemini.google.com/*"],
+      "js": ["page-hook/gemini-hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "OpenMem",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    }
+  }
+}
