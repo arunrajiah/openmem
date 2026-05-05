@@ -6,6 +6,8 @@
   "scripts": {
     "build": "node esbuild.config.mjs",
     "build:watch": "node esbuild.config.mjs --watch",
+    "build:firefox": "node esbuild.config.mjs --firefox",
+    "build:watch:firefox": "node esbuild.config.mjs --watch --firefox",
     "test": "node --import tsx --test src/adapters/claude/parser.test.ts src/adapters/chatgpt/parser.test.ts src/adapters/gemini/parser.test.ts"
   },
   "dependencies": {

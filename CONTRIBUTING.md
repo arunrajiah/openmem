@@ -29,14 +29,21 @@ pnpm --filter @openmem/companion dev
 # Terminal 2 — web UI with HMR (proxies API to :7410)
 pnpm --filter @openmem/web dev         # → http://localhost:5173
 
-# Terminal 3 — extension in watch mode
+# Terminal 3 — extension in watch mode (Chrome)
 pnpm --filter @openmem/extension build:watch
+
+# Terminal 3 — extension in watch mode (Firefox)
+pnpm --filter @openmem/extension build:watch:firefox
 ```
 
-Then load the extension:
+Then load in Chrome:
 1. Open `chrome://extensions`
 2. Enable **Developer mode**
 3. Click **Load unpacked** → select `packages/extension/dist/`
+
+Or load in Firefox (requires Firefox 116+):
+1. Open `about:debugging` → **This Firefox**
+2. Click **Load Temporary Add-on** → select `packages/extension/dist-firefox/manifest.json`
 
 ### Running tests
 

@@ -10,15 +10,20 @@ permissions:
   contents: write   # needed to create GitHub Releases
 
 jobs:
-  publish:
-    name: Build & publish to Chrome Web Store
+  # ── Shared build step: produces Chrome + Firefox dist dirs ──────────────────
+  build:
+    name: Build all packages
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag:     ${{ steps.ver.outputs.tag }}
+      chrome_zip: ${{ steps.ver.outputs.chrome_zip }}
+      firefox_zip: ${{ steps.ver.outputs.firefox_zip }}
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        # version is read from "packageManager" in package.json — no need to repeat it here
 
       - uses: actions/setup-node@v4
         with:
@@ -34,11 +39,12 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
-          echo "tag=$TAG"         >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "zip=openmem-extension-${VERSION}.zip" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG"                                           >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION"                                   >> "$GITHUB_OUTPUT"
+          echo "chrome_zip=openmem-chrome-${VERSION}.zip"          >> "$GITHUB_OUTPUT"
+          echo "firefox_zip=openmem-firefox-${VERSION}.zip"        >> "$GITHUB_OUTPUT"
 
-      # ── Stamp version into manifest.json and all package.json files ────────
+      # ── Stamp version into manifests and all package.json files ────────────
       - name: Stamp version ${{ steps.ver.outputs.version }}
         run: node scripts/bump-version.mjs ${{ steps.ver.outputs.version }}
 
@@ -52,24 +58,58 @@ jobs:
       - name: Build companion
         run: pnpm --filter @openmem/companion build
 
-      - name: Build extension
+      - name: Build extension (Chrome)
         run: pnpm --filter @openmem/extension build
 
-      # ── Package extension as a ZIP ─────────────────────────────────────────
-      - name: Create extension ZIP
+      - name: Build extension (Firefox)
+        run: pnpm --filter @openmem/extension build:firefox
+
+      # ── Package both ZIPs ─────────────────────────────────────────────────
+      - name: Create Chrome ZIP
         run: |
           cd packages/extension/dist
-          zip -r "../../../${{ steps.ver.outputs.zip }}" .
+          zip -r "../../../${{ steps.ver.outputs.chrome_zip }}" .
           cd -
-          echo "ZIP contents:"
-          unzip -l "${{ steps.ver.outputs.zip }}"
+          echo "Chrome ZIP contents:"; unzip -l "${{ steps.ver.outputs.chrome_zip }}"
 
-      # ── Upload to Chrome Web Store (upload only, submit for review below) ──
+      - name: Create Firefox ZIP
+        run: |
+          cd packages/extension/dist-firefox
+          zip -r "../../../${{ steps.ver.outputs.firefox_zip }}" .
+          cd -
+          echo "Firefox ZIP contents:"; unzip -l "${{ steps.ver.outputs.firefox_zip }}"
+
+      # ── Upload ZIPs as build artifacts for downstream jobs ─────────────────
+      - name: Upload Chrome ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-zip
+          path: ${{ steps.ver.outputs.chrome_zip }}
+          retention-days: 7
+
+      - name: Upload Firefox ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: firefox-zip
+          path: ${{ steps.ver.outputs.firefox_zip }}
+          retention-days: 7
+
+  # ── Publish to Chrome Web Store ─────────────────────────────────────────────
+  publish-chrome:
+    name: Publish to Chrome Web Store
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download Chrome ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: chrome-zip
+
       - name: Upload to Chrome Web Store
-        id: cws_upload
         run: |
           npx --yes chrome-webstore-upload-cli@3 upload \
-            --source "${{ steps.ver.outputs.zip }}" \
+            --source "${{ needs.build.outputs.chrome_zip }}" \
             --extension-id "${{ secrets.CHROME_EXTENSION_ID }}" \
             --client-id "${{ secrets.CHROME_CLIENT_ID }}" \
             --client-secret "${{ secrets.CHROME_CLIENT_SECRET }}" \
@@ -77,8 +117,7 @@ jobs:
         env:
           CI: true
 
-      # ── Submit the uploaded draft for review ───────────────────────────────
-      - name: Publish to Chrome Web Store
+      - name: Submit for Chrome Web Store review
         run: |
           npx --yes chrome-webstore-upload-cli@3 publish \
             --extension-id "${{ secrets.CHROME_EXTENSION_ID }}" \
@@ -88,26 +127,82 @@ jobs:
         env:
           CI: true
 
-      # ── Create a GitHub Release with the ZIP attached ──────────────────────
+  # ── Publish to Firefox Add-ons (AMO) ────────────────────────────────────────
+  publish-firefox:
+    name: Publish to Firefox Add-ons
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download Firefox ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: firefox-zip
+
+      - name: Install web-ext
+        run: npm install --global web-ext
+
+      # web-ext sign requires a source directory, not a ZIP — unzip first
+      - name: Unzip Firefox build
+        run: |
+          mkdir -p /tmp/firefox-ext
+          unzip "${{ needs.build.outputs.firefox_zip }}" -d /tmp/firefox-ext
+
+      - name: Sign & submit to AMO
+        run: |
+          web-ext sign \
+            --source-dir /tmp/firefox-ext \
+            --artifacts-dir /tmp/amo-artifacts \
+            --api-key "${{ secrets.FIREFOX_JWT_ISSUER }}" \
+            --api-secret "${{ secrets.FIREFOX_JWT_SECRET }}" \
+            --channel listed
+        env:
+          CI: true
+
+  # ── Create GitHub Release with both ZIPs attached ───────────────────────────
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build, publish-chrome, publish-firefox]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Chrome ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: chrome-zip
+
+      - name: Download Firefox ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: firefox-zip
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.ver.outputs.tag }}
-          name: "OpenMem ${{ steps.ver.outputs.tag }}"
+          tag_name: ${{ needs.build.outputs.tag }}
+          name: "OpenMem ${{ needs.build.outputs.tag }}"
           body: |
             ## Installation
 
-            ### Option A — Chrome Web Store (recommended)
-            The extension has been submitted for review. Once approved it will
-            be available at the Chrome Web Store link in the README.
+            ### Chrome — Web Store (recommended)
+            The extension has been submitted for review. Once approved it will be
+            available at the Chrome Web Store link in the README.
 
-            ### Option B — Load unpacked (available immediately)
-            1. Download `${{ steps.ver.outputs.zip }}` below
+            ### Firefox — Add-ons (recommended)
+            The extension has been submitted to AMO. Once approved it will be
+            available at the Firefox Add-ons link in the README.
+
+            ### Load unpacked (available immediately)
+            1. Download the ZIP for your browser below
             2. Unzip it
-            3. Open `chrome://extensions` → enable **Developer mode**
-            4. Click **Load unpacked** → select the unzipped folder
+            3. **Chrome:** `chrome://extensions` → Developer mode → Load unpacked
+            4. **Firefox:** `about:debugging` → This Firefox → Load Temporary Add-on → select `manifest.json`
 
             ---
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for what changed in this release.
-          files: ${{ steps.ver.outputs.zip }}
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for what changed.
+          files: |
+            ${{ needs.build.outputs.chrome_zip }}
+            ${{ needs.build.outputs.firefox_zip }}
           generate_release_notes: true
