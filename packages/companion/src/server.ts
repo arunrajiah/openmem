@@ -7,6 +7,7 @@ import staticFiles from "@fastify/static";
 import type { Config } from "./config.js";
 import { openDb } from "./db/index.js";
 import { Repo } from "./db/repo.js";
+import { loadKey } from "./lib/crypto.js";
 import { registerIngestRoutes } from "./routes/ingest.js";
 import { registerConversationRoutes } from "./routes/conversations.js";
 import { registerSearchRoutes } from "./routes/search.js";
@@ -20,7 +21,8 @@ const PUBLIC_DIR = join(__dirname, "..", "public");
 
 export async function buildServer(config: Config) {
   const db = openDb(config.dbPath);
-  const repo = new Repo(db);
+  const encryptionKey = loadKey(config.dataDir);
+  const repo = new Repo(db, encryptionKey);
 
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL ?? "info" } });
 

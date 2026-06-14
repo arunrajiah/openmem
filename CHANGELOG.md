@@ -24,6 +24,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `scripts/bump-version.mjs` now stamps `manifest.firefox.json` alongside `manifest.json`
 - Firefox load-unpacked instructions added to README Quickstart
 
+**Encrypted database at rest**
+- `src/lib/crypto.ts` — AES-256-GCM encrypt/decrypt; key loaded from `~/.openmem/key` or `OPENMEM_ENCRYPTION_KEY` env var
+- Migration 002 drops the three FTS auto-triggers; FTS is now managed manually by the repo layer so plaintext is always indexed regardless of encryption state
+- `Repo` accepts an optional `encryptionKey`; encrypts `message.content`, `conversation.title`, and `raw_payload.payload_json` on write; decrypts transparently on read (plaintext passthrough for rows written before encryption was enabled)
+- `content_hash` computed on plaintext before encryption — deduplication continues to work correctly
+- Search snippet generation moved from SQLite `snippet()` to Node.js after decryption
+- `openmem encrypt` CLI command generates a 32-byte key at `~/.openmem/key` (mode 0600)
+- Encryption status logged on server startup (`encryption: on/off`)
+- `GET /stats` response includes `encrypted: boolean`
+
 **Community & governance**
 - `.github/CODEOWNERS` — all PRs require maintainer review
 - `.github/pull_request_template.md` — contributor checklist (lint, tests, adapter rules, migration rules)

@@ -1,6 +1,7 @@
 import type { DB } from "./index.js";
 import type { IngestTurn, Conversation, Message } from "@openmem/shared";
 import { newId, contentHash } from "../lib/ids.js";
+import { type EncryptionKey, encrypt, decrypt } from "../lib/crypto.js";
 
 export interface IngestResult {
   conversationId: string;
@@ -43,14 +44,49 @@ interface SearchRow {
   provider: string;
   model: string | null;
   role: string;
-  snippet: string;
+  content: string;
   created_at: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 export class Repo {
-  constructor(private db: DB) {}
+  constructor(
+    private db: DB,
+    private key: EncryptionKey | null = null,
+  ) {}
+
+  // ── Encryption helpers ─────────────────────────────────────────────────────
+
+  private enc(value: string): string {
+    return this.key ? encrypt(this.key, value) : value;
+  }
+
+  private dec(value: string): string {
+    return this.key ? decrypt(this.key, value) : value;
+  }
+
+  private decOrNull(value: string | null): string | null {
+    return value === null ? null : this.dec(value);
+  }
+
+  // ── FTS helpers (manual — auto-triggers were dropped in migration 002) ─────
+
+  private ftsInsert(rowid: number, plainContent: string): void {
+    this.db
+      .prepare("INSERT INTO message_fts(rowid, content) VALUES (?, ?)")
+      .run(rowid, plainContent);
+  }
+
+  private ftsDelete(rowid: number, plainContent: string): void {
+    this.db
+      .prepare(
+        "INSERT INTO message_fts(message_fts, rowid, content) VALUES ('delete', ?, ?)",
+      )
+      .run(rowid, plainContent);
+  }
+
+  // ── Ingest ─────────────────────────────────────────────────────────────────
 
   ingestTurn(turn: IngestTurn): IngestResult {
     const now = new Date().toISOString();
@@ -75,7 +111,12 @@ export class Repo {
                  model = COALESCE(?, model)
              WHERE id = ?`,
           )
-          .run(now, turn.title ?? null, turn.model ?? null, conversationId);
+          .run(
+            now,
+            turn.title ? this.enc(turn.title) : null,
+            turn.model ?? null,
+            conversationId,
+          );
       } else {
         conversationId = newId("conv");
         this.db
@@ -88,7 +129,7 @@ export class Repo {
             conversationId,
             turn.provider,
             turn.providerConversationId,
-            turn.title ?? null,
+            turn.title ? this.enc(turn.title) : null,
             turn.model ?? null,
             createdAt,
             now,
@@ -96,6 +137,7 @@ export class Repo {
           );
       }
 
+      // Hash computed on plaintext — dedup is key-independent
       const hash = contentHash(turn.content);
 
       // Dedup: by providerMessageId first, then by (conversation, role, hash)
@@ -131,7 +173,7 @@ export class Repo {
           conversationId,
           turn.providerMessageId ?? null,
           turn.role,
-          turn.content,
+          this.enc(turn.content),
           turn.contentFormat,
           createdAt,
           turn.tokensEstimate ?? null,
@@ -140,10 +182,16 @@ export class Repo {
           hash,
         );
 
+      // Feed plaintext to the FTS index (triggers were dropped in migration 002)
+      const { rowid } = this.db
+        .prepare("SELECT rowid FROM message WHERE id = ?")
+        .get(messageId) as { rowid: number };
+      this.ftsInsert(rowid, turn.content);
+
       if (turn.rawPayload !== undefined) {
         this.db
           .prepare("INSERT INTO raw_payload (message_id, payload_json) VALUES (?, ?)")
-          .run(messageId, JSON.stringify(turn.rawPayload));
+          .run(messageId, this.enc(JSON.stringify(turn.rawPayload)));
       }
 
       return { conversationId, messageId, deduplicated: false };
@@ -151,6 +199,8 @@ export class Repo {
 
     return ingest();
   }
+
+  // ── Conversations ──────────────────────────────────────────────────────────
 
   listConversations(opts: {
     provider?: string | undefined;
@@ -176,7 +226,7 @@ export class Repo {
       LIMIT ? OFFSET ?`;
     params.push(opts.limit, opts.offset);
     const rows = this.db.prepare(sql).all(...params) as ConvRow[];
-    return rows.map(rowToConversation);
+    return rows.map((r) => this.rowToConversation(r));
   }
 
   getConversation(id: string): Conversation | null {
@@ -186,15 +236,17 @@ export class Repo {
          FROM conversation c WHERE c.id = ?`,
       )
       .get(id) as ConvRow | undefined;
-    return row ? rowToConversation(row) : null;
+    return row ? this.rowToConversation(row) : null;
   }
 
   listMessages(conversationId: string): Message[] {
     const rows = this.db
       .prepare("SELECT * FROM message WHERE conversation_id = ? ORDER BY created_at ASC")
       .all(conversationId) as MsgRow[];
-    return rows.map(rowToMessage);
+    return rows.map((r) => this.rowToMessage(r));
   }
+
+  // ── Search ─────────────────────────────────────────────────────────────────
 
   search(opts: {
     query: string;
@@ -204,7 +256,6 @@ export class Repo {
     limit: number;
     offset: number;
   }): { results: SearchResult[]; total: number } {
-    // Sanitise: FTS5 throws on some inputs; wrap in try and return empty on error.
     const ftsQuery = sanitiseFtsQuery(opts.query);
     if (!ftsQuery) return { results: [], total: 0 };
 
@@ -237,6 +288,8 @@ export class Repo {
         )
         .get(...params) as { n: number };
 
+      // Load raw content instead of using snippet() — we decrypt and generate
+      // the snippet in Node.js so it works regardless of encryption state.
       const rows = this.db
         .prepare(
           `SELECT
@@ -244,10 +297,10 @@ export class Repo {
              m.conversation_id,
              m.role,
              m.created_at,
+             m.content,
              c.provider,
              c.title        AS conversation_title,
-             c.model,
-             snippet(message_fts, 0, '<mark>', '</mark>', '…', 24) AS snippet
+             c.model
            FROM message_fts
            JOIN message m      ON message_fts.rowid = m.rowid
            JOIN conversation c ON m.conversation_id = c.id
@@ -258,11 +311,19 @@ export class Repo {
         .all(...params, opts.limit, opts.offset) as SearchRow[];
 
       return {
-        results: rows.map(rowToSearchResult),
+        results: rows.map((r) => ({
+          messageId: r.message_id,
+          conversationId: r.conversation_id,
+          conversationTitle: this.decOrNull(r.conversation_title),
+          provider: r.provider,
+          model: r.model,
+          role: r.role,
+          snippet: makeSnippet(this.dec(r.content), opts.query),
+          createdAt: r.created_at,
+        })),
         total: countRow.n,
       };
     } catch {
-      // FTS5 query parse error — treat as no results
       return { results: [], total: 0 };
     }
   }
@@ -277,10 +338,6 @@ export class Repo {
       .run(JSON.stringify(unique), now, conversationId);
   }
 
-  /**
-   * Return all tags in use across all conversations, with their conversation
-   * counts, ordered by count desc.
-   */
   listAllTags(): TagCount[] {
     const rows = this.db
       .prepare(
@@ -309,12 +366,12 @@ export class Repo {
       .prepare("SELECT provider, COUNT(*) AS n FROM conversation GROUP BY provider")
       .all() as { provider: string; n: number }[];
 
-    const { page_count } = this.db
-      .prepare("PRAGMA page_count")
-      .get() as { page_count: number };
-    const { page_size } = this.db
-      .prepare("PRAGMA page_size")
-      .get() as { page_size: number };
+    const { page_count } = this.db.prepare("PRAGMA page_count").get() as {
+      page_count: number;
+    };
+    const { page_size } = this.db.prepare("PRAGMA page_size").get() as {
+      page_size: number;
+    };
     const dbSizeBytes = page_count * page_size;
 
     const oldest = (
@@ -335,10 +392,10 @@ export class Repo {
       dbSizeBytes,
       oldestConversation: oldest,
       newestConversation: newest,
+      encrypted: this.key !== null,
     };
   }
 
-  /** Also allow tag-based filtering in listConversations */
   listConversationsByTag(tag: string, limit: number, offset: number): Conversation[] {
     const rows = this.db
       .prepare(
@@ -349,9 +406,43 @@ export class Repo {
          LIMIT ? OFFSET ?`,
       )
       .all(tag, limit, offset) as ConvRow[];
-    return rows.map(rowToConversation);
+    return rows.map((r) => this.rowToConversation(r));
+  }
+
+  // ── Row mappers ────────────────────────────────────────────────────────────
+
+  private rowToConversation(r: ConvRow): Conversation {
+    return {
+      id: r.id,
+      provider: r.provider as Conversation["provider"],
+      providerConversationId: r.provider_conversation_id,
+      title: this.decOrNull(r.title),
+      model: r.model,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      tags: JSON.parse(r.tags_json) as string[],
+      source: r.source as Conversation["source"],
+      messageCount: r.message_count ?? 0,
+    };
+  }
+
+  private rowToMessage(r: MsgRow): Message {
+    return {
+      id: r.id,
+      conversationId: r.conversation_id,
+      providerMessageId: r.provider_message_id,
+      role: r.role as Message["role"],
+      content: this.dec(r.content),
+      contentFormat: r.content_format as Message["contentFormat"],
+      createdAt: r.created_at,
+      tokensEstimate: r.tokens_estimate,
+      attachments: JSON.parse(r.attachments_json) as Message["attachments"],
+      toolCalls: JSON.parse(r.tool_calls_json) as Message["toolCalls"],
+    };
   }
 }
+
+// ── Public types ──────────────────────────────────────────────────────────────
 
 export interface TagCount {
   tag: string;
@@ -365,6 +456,7 @@ export interface DbStats {
   dbSizeBytes: number;
   oldestConversation: string | null;
   newestConversation: string | null;
+  encrypted: boolean;
 }
 
 export interface SearchResult {
@@ -378,60 +470,48 @@ export interface SearchResult {
   createdAt: string;
 }
 
-/**
- * Strip characters that have special meaning in FTS5 query syntax so that a
- * plain user search string doesn't throw a parse error.
- * We keep alphanumerics, spaces, and hyphens; everything else is removed.
- */
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 function sanitiseFtsQuery(raw: string): string {
   return raw
     .trim()
-    .replace(/[^\w\s'-]/g, " ")  // strip FTS5 specials except hyphen/apostrophe
+    .replace(/[^\w\s'-]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-function rowToSearchResult(r: SearchRow): SearchResult {
-  return {
-    messageId: r.message_id,
-    conversationId: r.conversation_id,
-    conversationTitle: r.conversation_title,
-    provider: r.provider,
-    model: r.model,
-    role: r.role,
-    snippet: r.snippet,
-    createdAt: r.created_at,
-  };
-}
+/**
+ * Generate a search-result snippet in Node.js.
+ * Replaces the SQLite snippet() call so it works on decrypted content.
+ */
+function makeSnippet(content: string, query: string): string {
+  const terms = sanitiseFtsQuery(query)
+    .split(/\s+/)
+    .filter((t) => t.length > 1);
 
-function rowToConversation(r: ConvRow): Conversation {
-  return {
-    id: r.id,
-    // SQLite stores these as strings; values were validated by Zod on ingest
-    provider: r.provider as Conversation["provider"],
-    providerConversationId: r.provider_conversation_id,
-    title: r.title,
-    model: r.model,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
-    tags: JSON.parse(r.tags_json) as string[],
-    source: r.source as Conversation["source"],
-    messageCount: r.message_count ?? 0,
-  };
-}
+  const lower = content.toLowerCase();
+  let anchor = 0;
+  for (const term of terms) {
+    const idx = lower.indexOf(term.toLowerCase());
+    if (idx !== -1) {
+      anchor = idx;
+      break;
+    }
+  }
 
-function rowToMessage(r: MsgRow): Message {
-  return {
-    id: r.id,
-    conversationId: r.conversation_id,
-    providerMessageId: r.provider_message_id,
-    // SQLite stores these as strings; values were validated by Zod on ingest
-    role: r.role as Message["role"],
-    content: r.content,
-    contentFormat: r.content_format as Message["contentFormat"],
-    createdAt: r.created_at,
-    tokensEstimate: r.tokens_estimate,
-    attachments: JSON.parse(r.attachments_json) as Message["attachments"],
-    toolCalls: JSON.parse(r.tool_calls_json) as Message["toolCalls"],
-  };
+  const start = Math.max(0, anchor - 80);
+  const end = Math.min(content.length, anchor + 160);
+  let snippet = content
+    .slice(start, end)
+    .replace(/\n{2,}/g, " ¶ ")
+    .replace(/\n/g, " ");
+
+  if (start > 0) snippet = "…" + snippet;
+  if (end < content.length) snippet += "…";
+
+  for (const term of terms) {
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    snippet = snippet.replace(new RegExp(escaped, "gi"), "<mark>$&</mark>");
+  }
+  return snippet;
 }

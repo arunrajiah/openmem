@@ -83,6 +83,20 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 2,
+    name: "drop_fts_auto_triggers",
+    up: (db) => {
+      // Drop the three auto-triggers so encrypted content is never indexed raw.
+      // FTS is now managed manually by the Repo layer, which feeds plaintext
+      // to the index regardless of whether the canonical column is encrypted.
+      db.exec(`
+        DROP TRIGGER IF EXISTS message_ai;
+        DROP TRIGGER IF EXISTS message_ad;
+        DROP TRIGGER IF EXISTS message_au;
+      `);
+    },
+  },
 ];
 
 export function runMigrations(db: Database): void {

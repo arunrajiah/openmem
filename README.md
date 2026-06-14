@@ -109,7 +109,7 @@ npx openmem import gemini ~/Downloads/takeout.zip
 | Conversation viewer | ✅ |
 | Export conversation to Markdown | ✅ |
 | Tags | ✅ |
-| Encrypted database at rest | 🗓 v1.1 |
+| Encrypted database at rest | ✅ v1.1 |
 | Firefox extension support | ✅ v1.1 |
 | Tauri desktop app | 🗓 v2 |
 
@@ -212,6 +212,36 @@ docs/
   store-listing.md
   release-process.md
 ```
+
+---
+
+## Encryption
+
+Encryption is opt-in. When enabled, message content, conversation titles, and
+raw API payloads are encrypted with AES-256-GCM before being written to the
+SQLite database. Search and display decrypt transparently at runtime.
+
+### Enable encryption
+
+```bash
+openmem encrypt
+# → Key written to ~/.openmem/key (mode 0600)
+# → All new data is encrypted from this point on
+```
+
+Existing data stored before you enabled encryption is **not** automatically
+re-encrypted — it remains readable and will be decrypted transparently on
+access.
+
+> **Important:** Back up `~/.openmem/key`. If you lose it, your encrypted
+> data cannot be recovered. Alternatively, set `OPENMEM_ENCRYPTION_KEY` to a
+> 64-hex-char (32-byte) value and manage the key yourself.
+
+### Disable encryption
+
+Delete `~/.openmem/key`. New data will be stored plaintext; previously
+encrypted rows remain encrypted and will no longer be readable until the key
+is restored.
 
 ---
 
