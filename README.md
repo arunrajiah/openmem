@@ -111,7 +111,7 @@ npx openmem import gemini ~/Downloads/takeout.zip
 | Tags | ✅ |
 | Encrypted database at rest | ✅ v1.1 |
 | Firefox extension support | ✅ v1.1 |
-| Tauri desktop app | 🗓 v2 |
+| Tauri desktop app | 🚧 v2 (scaffold) |
 
 ---
 
@@ -202,6 +202,7 @@ packages/
   extension/     Browser extension (Manifest V3, esbuild)
   web/           React search UI (Vite + Tailwind)
   shared/        Zod schemas + TypeScript types shared across packages
+  desktop/       Tauri 2 desktop shell (sidecar companion) — v2, scaffold
 scripts/
   bump-version.mjs   Stamp a version across all packages + manifest
 docs/

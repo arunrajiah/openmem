@@ -9,3 +9,13 @@ coverage
 .openmem-dev/
 packages/companion/public/
 packages/extension/dist/
+
+# Tauri desktop build artifacts
+packages/desktop/src-tauri/target/
+packages/desktop/src-tauri/binaries/
+packages/desktop/src-tauri/gen/
+packages/desktop/src-tauri/icons/*.png
+packages/desktop/src-tauri/icons/*.icns
+packages/desktop/src-tauri/icons/*.ico
+packages/desktop/sea-config.json
+packages/desktop/sea-prep.blob

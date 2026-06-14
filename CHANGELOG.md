@@ -9,6 +9,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+**Desktop app scaffold (`@openmem/desktop`, v2 — work in progress)**
+- Tauri 2 package that wraps the companion as a desktop app
+- Dev workflow: `beforeDevCommand` builds the web UI + companion and starts it on `:7410`; Tauri loads it directly via `devUrl`
+- Production wiring: companion runs as a Tauri sidecar (`externalBin`); window shows a placeholder that polls `/health` then navigates to the companion-served UI; sidecar is killed on exit
+- `scripts/build-sidecar.mjs` — Node SEA sidecar builder (native-addon packaging unverified; see package README)
+- Deferred: cross-platform release CI, committed icons, single-binary verification
+
 ---
 
 ## [1.1.0] — Unreleased
