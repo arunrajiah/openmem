@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="OpenMem logo">
+  <defs><linearGradient id="g" x1="12" y1="12" x2="84" y2="84" gradientUnits="userSpaceOnUse"><stop stop-color="#A855F7"/><stop offset="1" stop-color="#06B6D4"/></linearGradient></defs>
+  <rect width="96" height="96" rx="22" fill="url(#g)"/>
+  <path d="M31 66V37c0-8 6-13 14-13h6c8 0 14 5 14 13v29" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+  <path d="M31 48h34M48 24v48" stroke="#E9D5FF" stroke-width="7" stroke-linecap="round"/>
+</svg>
