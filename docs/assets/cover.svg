@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="OpenMem product cover">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#15133D"/>
+      <stop offset="100%" stop-color="#1F2A68"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" stop-opacity="0.42"/>
+      <stop offset="100%" stop-color="#06B6D4" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="950" cy="100" r="280" fill="url(#glow)"/>
+  <circle cx="1100" cy="500" r="150" fill="#06B6D4" fill-opacity="0.08"/>
+  <circle cx="80" cy="550" r="200" fill="#4F46E5" fill-opacity="0.06"/>
+  <line x1="0" y1="210" x2="1200" y2="210" stroke="white" stroke-opacity="0.04" stroke-width="1"/>
+  <line x1="0" y1="420" x2="1200" y2="420" stroke="white" stroke-opacity="0.04" stroke-width="1"/>
+  <line x1="400" y1="0" x2="400" y2="630" stroke="white" stroke-opacity="0.04" stroke-width="1"/>
+  <line x1="800" y1="0" x2="800" y2="630" stroke="white" stroke-opacity="0.04" stroke-width="1"/>
+  <image href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5NiA5NiIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJPcGVuTWVtIGxvZ28iPgogIDxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iZyIgeDE9IjEyIiB5MT0iMTIiIHgyPSI4NCIgeTI9Ijg0IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iI0E4NTVGNyIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzA2QjZENCIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPgogIDxyZWN0IHdpZHRoPSI5NiIgaGVpZ2h0PSI5NiIgcng9IjIyIiBmaWxsPSJ1cmwoI2cpIi8+CiAgPHBhdGggZD0iTTMxIDY2VjM3YzAtOCA2LTEzIDE0LTEzaDZjOCAwIDE0IDUgMTQgMTN2MjkiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSI4IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNMzEgNDhoMzRNNDggMjR2NDgiIHN0cm9rZT0iI0U5RDVGRiIgc3Ryb2tlLXdpZHRoPSI3IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+Cg==" x="92" y="240" width="150" height="150" filter="url(#shadow)"/>
+  <rect x="260" y="155" width="116" height="34" rx="17" fill="#4F46E5" fill-opacity="0.5" stroke="#4F46E5" stroke-width="1"/>
+  <text x="318" y="178" font-size="15" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-weight="600" fill="#C7D2FE" text-anchor="middle">AI</text>
+  <text x="260" y="270" font-size="80" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-weight="800" fill="white" letter-spacing="-3">OpenMem</text>
+  <text x="262" y="330" font-size="28" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-weight="400" fill="#C7D2FE">Local-first AI memory across Claude, ChatGPT and Gemini</text>
+  <line x1="262" y1="370" x2="980" y2="370" stroke="white" stroke-opacity="0.12" stroke-width="1"/>
+  <rect x="262" y="390" width="116" height="36" rx="8" fill="white" fill-opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <text x="320" y="413" font-size="15" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" fill="white" fill-opacity="0.8" text-anchor="middle">MCP</text>
+  <rect x="392" y="390" width="116" height="36" rx="8" fill="white" fill-opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <text x="450" y="413" font-size="15" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" fill="white" fill-opacity="0.8" text-anchor="middle">Private</text>
+  <rect x="522" y="390" width="126" height="36" rx="8" fill="white" fill-opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <text x="585" y="413" font-size="15" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" fill="white" fill-opacity="0.8" text-anchor="middle">Searchable</text>
+  <rect x="262" y="450" width="162" height="44" rx="10" fill="#4F46E5"/>
+  <text x="343" y="477" font-size="22" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-weight="700" fill="white" text-anchor="middle">Open source</text>
+  <text x="1140" y="600" font-size="18" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" fill="white" fill-opacity="0.35" text-anchor="end">hub.arunrajiah.com</text>
+</svg>
